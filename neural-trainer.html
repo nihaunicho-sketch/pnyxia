@@ -1,0 +1,862 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Trainer — Pnyxia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=VT323&display=swap');
+
+  :root {
+    --green: #39FF14;
+    --green-dim: #1a7a08;
+    --green-glow: rgba(57,255,20,0.35);
+    --green-faint: rgba(57,255,20,0.08);
+    --bg: #0f1310;
+    --panel: #151b16;
+    --border: #1e3020;
+    --text: #a8d4a0;
+    --white: #e8ffe5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* ─── SCANLINES ─────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── HEADER BAR ─────────────────────────────── */
+  .topbar {
+    width: 100%;
+    background: #0a2fff;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(20px, 5vw, 38px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 3px solid #4a6fff;
+  }
+
+  .topbar .tag {
+    font-size: 11px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* ─── MAIN CONTAINER ─────────────────────────── */
+  .container {
+    width: 100%;
+    max-width: 860px;
+    padding: 30px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ─── GAME CARD ──────────────────────────────── */
+  .game-card {
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .game-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(57,255,20,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .card-label {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+    padding: 3px 8px;
+    letter-spacing: 2px;
+  }
+
+  .level-badge {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    font-size: 11px;
+    color: #fff;
+    background: #0a2fff;
+    padding: 3px 8px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── NETWORK CANVAS AREA ────────────────────── */
+  #netCanvas {
+    display: block;
+    width: 100%;
+    height: 280px;
+    cursor: pointer;
+  }
+
+  /* ─── INFO PANEL ─────────────────────────────── */
+  .info-panel {
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .classify-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .classify-label {
+    font-size: 11px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .data-point {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .feature-chip {
+    background: var(--green-faint);
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  .feature-chip.active {
+    background: rgba(57,255,20,0.2);
+    border-color: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+
+  /* ─── OUTPUT INDICATORS ──────────────────────── */
+  .output-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .output-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 3px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    min-width: 120px;
+  }
+
+  .output-chip .dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--green-dim);
+    transition: all 0.3s;
+  }
+
+  .output-chip.fired {
+    border-color: var(--green);
+    background: var(--green-faint);
+    box-shadow: 0 0 14px var(--green-glow);
+  }
+
+  .output-chip.fired .dot {
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  .output-chip.target {
+    border-color: #0a2fff;
+    background: rgba(10,47,255,0.08);
+  }
+
+  .output-chip.target .dot {
+    border-color: #4a6fff;
+  }
+
+  .target-label {
+    font-size: 10px;
+    color: #4a6fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+
+  /* ─── BUTTONS ────────────────────────────────── */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    border-radius: 2px;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: #0a1a0a;
+    font-weight: bold;
+  }
+  .btn-primary:hover {
+    background: #5fff3a;
+    box-shadow: 0 0 20px var(--green-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+
+  /* ─── SCORE / STATUS BAR ─────────────────────── */
+  .status-bar {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'VT323', monospace;
+    font-size: 28px;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  /* ─── FEEDBACK OVERLAY ───────────────────────── */
+  .feedback {
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+  .feedback.show { display: flex; }
+  .feedback.correct { background: rgba(57,255,20,0.12); border: 1px solid var(--green); color: var(--green); }
+  .feedback.wrong   { background: rgba(255,60,60,0.1);  border: 1px solid #ff3c3c;    color: #ff6060; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ─── INSTRUCTIONS ───────────────────────────── */
+  .instructions {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+    opacity: 0.7;
+  }
+
+  /* ─── TUTORIAL BOX ───────────────────────────── */
+  .tutorial {
+    background: var(--green-faint);
+    border: 1px solid var(--green-dim);
+    border-radius: 3px;
+    padding: 14px 18px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .tutorial strong { color: var(--green); }
+
+  /* ─── PROGRESS BAR ───────────────────────────── */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* ─── LEGEND ─────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text);
+    opacity: 0.7;
+  }
+  .legend-node {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--green-dim);
+  }
+  .legend-node.filled { background: var(--green); border-color: var(--green); }
+  .legend-node.clickable { border-color: var(--green); border-style: dashed; }
+
+  /* ─── WIN SCREEN ─────────────────────────────── */
+  #winScreen {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,19,12,0.95);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    text-align: center;
+  }
+  #winScreen.show { display: flex; }
+  #winScreen h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px,6vw,52px);
+    color: var(--green);
+    text-shadow: 0 0 30px var(--green);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+  #winScreen p { font-size: 16px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  Choose your game
+  <span class="tag">NEURAL NETS</span>
+</div>
+
+<div class="container">
+
+  <!-- MAIN GAME CARD -->
+  <div class="game-card">
+    <span class="level-badge" id="levelBadge">01</span>
+    <span class="card-label">NEURAL NETS</span>
+    <canvas id="netCanvas"></canvas>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar">
+    <div class="stat">
+      <span class="stat-label">Score</span>
+      <span class="stat-value" id="score">000</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Round</span>
+      <span class="stat-value" id="roundNum">1 / 8</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Streak</span>
+      <span class="stat-value" id="streak">0</span>
+    </div>
+  </div>
+
+  <!-- CLASSIFY DATA ROW -->
+  <div class="info-panel game-card" style="gap:14px;">
+    <div class="classify-row">
+      <span class="classify-label">Input Signal:</span>
+      <div class="data-point" id="dataPointRow"></div>
+    </div>
+    <div style="font-size:11px;color:var(--green-dim);letter-spacing:1px;">TARGET CLASSIFICATION →</div>
+    <div class="output-row" id="outputRow"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <!-- TUTORIAL -->
+  <div class="tutorial">
+    <strong>HOW TO PLAY:</strong><br>
+    Input nodes (left) are <strong>pre-activated</strong> by the data. Click <strong>hidden nodes</strong> (middle) to toggle them on/off. Output nodes (right) fire automatically when they receive enough signal. Match the <strong>TARGET</strong> output to score points!
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-node filled"></div> Active node</div>
+    <div class="legend-item"><div class="legend-node"></div> Inactive node</div>
+    <div class="legend-item"><div class="legend-node clickable"></div> Clickable (hidden layer)</div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="submitAnswer()">▶ CLASSIFY</button>
+    <button class="btn btn-secondary" onclick="resetHidden()">↺ RESET HIDDEN</button>
+    <button class="btn btn-secondary" onclick="showHint()">? HINT</button>
+  </div>
+
+</div>
+
+<!-- WIN SCREEN -->
+<div id="winScreen">
+  <h2>TRAINING COMPLETE</h2>
+  <p>Your neural net has learned to classify!</p>
+  <div class="stat" style="text-align:center">
+    <span class="stat-label">Final Score</span>
+    <span class="stat-value" id="finalScore" style="font-size:56px">000</span>
+  </div>
+  <button class="btn btn-primary" onclick="restartGame()">▶ PLAY AGAIN</button>
+</div>
+
+<script>
+// ─── GAME DATA ──────────────────────────────────────────────────────────────
+const ROUNDS = [
+  { inputs:[1,0,0,0], target:0, label:"SIZE: LARGE", features:["LARGE","ROUND","DARK","SLOW"], desc:"big circle" },
+  { inputs:[0,1,0,0], target:1, label:"SHAPE: SHARP", features:["SMALL","SHARP","BRIGHT","FAST"], desc:"small triangle" },
+  { inputs:[1,1,0,0], target:0, label:"BIG & BRIGHT", features:["LARGE","SHARP","BRIGHT","SLOW"], desc:"large star" },
+  { inputs:[0,0,1,0], target:1, label:"FAST SIGNAL",  features:["SMALL","ROUND","DARK","FAST"],  desc:"fast dot" },
+  { inputs:[1,0,1,0], target:0, label:"LARGE + FAST", features:["LARGE","ROUND","DARK","FAST"],  desc:"speeding orb" },
+  { inputs:[0,1,0,1], target:1, label:"SHARP + BRIGHT",features:["SMALL","SHARP","BRIGHT","SLOW"],"desc":"laser edge" },
+  { inputs:[1,1,1,0], target:0, label:"COMPLEX A",    features:["LARGE","SHARP","DARK","FAST"],  desc:"heavy blade" },
+  { inputs:[0,1,1,1], target:1, label:"COMPLEX B",    features:["SMALL","SHARP","BRIGHT","FAST"],"desc":"spark" },
+];
+
+// Weight table: hidden[h] contributes to output[o] if WEIGHTS[o][h] === 1
+// Output 0 (CLASS A) fires if hidden nodes 0,1 (or 0,2) active => sum >= 2
+// Output 1 (CLASS B) fires if hidden nodes 2,3 (or 1,3) active => sum >= 2
+const WEIGHTS = [
+  [1, 1, 0, 0],  // output 0 connected to hidden 0,1
+  [0, 0, 1, 1],  // output 1 connected to hidden 2,3
+];
+
+// Correct hidden activation patterns for each round
+const SOLUTIONS = [
+  [1,1,0,0], [0,0,1,1], [1,1,0,0], [0,0,1,1],
+  [1,1,0,0], [0,0,1,1], [1,1,0,0], [0,0,1,1],
+];
+
+const CLASS_NAMES = ["CLASS A", "CLASS B"];
+const CLASS_COLORS = ["#39FF14", "#4a6fff"];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentRound = 0;
+let score = 0;
+let streak = 0;
+let hiddenState = [0,0,0,0];
+let submitted = false;
+let animFrame;
+let signalParticles = [];
+
+// ─── CANVAS SETUP ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('netCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = canvas.offsetWidth  * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+window.addEventListener('resize', () => { resize(); buildLayout(); });
+resize();
+
+// ─── LAYOUT ──────────────────────────────────────────────────────────────────
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+
+let nodes = {};   // { layer: [{x,y,active,clickable,id}] }
+let edges = [];   // [{from, to, active}]
+
+function buildLayout() {
+  const w = W(), h = H();
+  const layerX = [w*0.14, w*0.38, w*0.62, w*0.86];
+  const layerSizes = [4, 4, 4, 2];
+  nodes = {};
+  edges = [];
+
+  layerSizes.forEach((count, li) => {
+    nodes[li] = [];
+    for (let i = 0; i < count; i++) {
+      const spacing = h / (count + 1);
+      nodes[li].push({
+        x: layerX[li], y: spacing * (i + 1),
+        active: false, clickable: (li === 1 || li === 2),
+        id: `${li}-${i}`, layer: li, idx: i,
+        r: 16
+      });
+    }
+  });
+
+  // Build edges: each layer → next layer (fully connected)
+  for (let li = 0; li < 3; li++) {
+    nodes[li].forEach(from => {
+      nodes[li+1].forEach(to => {
+        edges.push({ from, to, active: false, signal: 0 });
+      });
+    });
+  }
+}
+
+// ─── ROUND SETUP ─────────────────────────────────────────────────────────────
+function loadRound() {
+  submitted = false;
+  hiddenState = [0, 0, 0, 0];
+  signalParticles = [];
+
+  const r = ROUNDS[currentRound];
+  buildLayout();
+
+  // Set input activations
+  r.inputs.forEach((val, i) => {
+    nodes[0][i].active = !!val;
+  });
+
+  // Reset hidden & second hidden & outputs
+  [1,2,3].forEach(li => {
+    nodes[li].forEach(n => n.active = false);
+  });
+
+  updateOutputs();
+  renderUI();
+  draw();
+
+  document.getElementById('levelBadge').textContent = String(currentRound+1).padStart(2,'0');
+  document.getElementById('roundNum').textContent = `${currentRound+1} / ${ROUNDS.length}`;
+  document.getElementById('progressFill').style.width = `${(currentRound/ROUNDS.length)*100}%`;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').textContent = '';
+}
+
+function renderUI() {
+  const r = ROUNDS[currentRound];
+
+  // Data point chips
+  const dpRow = document.getElementById('dataPointRow');
+  dpRow.innerHTML = r.features.map((f,i) =>
+    `<span class="feature-chip ${r.inputs[i]?'active':''}">${f}</span>`
+  ).join('');
+
+  // Output chips
+  const outRow = document.getElementById('outputRow');
+  outRow.innerHTML = CLASS_NAMES.map((name,i) => {
+    const isTarget = (i === r.target);
+    return `<div class="output-chip ${isTarget?'target':''}" id="outChip${i}">
+      <div class="dot"></div>
+      ${name}${isTarget?'<span class="target-label">TARGET</span>':''}
+    </div>`;
+  }).join('');
+}
+
+// ─── COMPUTE OUTPUTS ──────────────────────────────────────────────────────────
+function getHiddenLayer() {
+  // Combine layer 1 and layer 2 (both are "hidden")
+  // For simplicity: hidden nodes = layer 1 state
+  return hiddenState;
+}
+
+function updateOutputs() {
+  // Layer 1 (first hidden) takes signals from inputs
+  nodes[1].forEach((n, i) => {
+    n.active = !!hiddenState[i];
+  });
+
+  // Layer 2 (second hidden) = same activation as layer 1 for visual flow
+  nodes[2].forEach((n, i) => {
+    n.active = hiddenState[i] && nodes[0][i] && nodes[0][i].active;
+    // Simplify: layer 2 node i is active if hidden[i] and some input is active
+    n.active = hiddenState[i];
+  });
+
+  // Output layer
+  const outputVals = WEIGHTS.map(row => {
+    const sum = row.reduce((s, w, i) => s + w * hiddenState[i], 0);
+    return sum >= 2 ? 1 : 0;
+  });
+  nodes[3].forEach((n, i) => { n.active = !!outputVals[i]; });
+
+  // Update output chips
+  outputVals.forEach((v, i) => {
+    const chip = document.getElementById('outChip' + i);
+    if (!chip) return;
+    if (v) chip.classList.add('fired'); else chip.classList.remove('fired');
+  });
+
+  // Update edges
+  edges.forEach(e => {
+    e.active = e.from.active && e.to.active;
+  });
+}
+
+// ─── DRAWING ─────────────────────────────────────────────────────────────────
+function draw() {
+  cancelAnimationFrame(animFrame);
+  ctx.clearRect(0, 0, W(), H());
+
+  // Background grid
+  ctx.strokeStyle = 'rgba(57,255,20,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W(); x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H()); ctx.stroke(); }
+  for (let y = 0; y < H(); y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W(),y); ctx.stroke(); }
+
+  // Draw edges
+  edges.forEach(e => {
+    const grad = ctx.createLinearGradient(e.from.x, e.from.y, e.to.x, e.to.y);
+    if (e.active) {
+      grad.addColorStop(0, 'rgba(57,255,20,0.6)');
+      grad.addColorStop(1, 'rgba(57,255,20,0.3)');
+      ctx.lineWidth = 1.5;
+    } else {
+      grad.addColorStop(0, 'rgba(57,255,20,0.08)');
+      grad.addColorStop(1, 'rgba(57,255,20,0.04)');
+      ctx.lineWidth = 1;
+    }
+    ctx.strokeStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(e.from.x, e.from.y);
+    ctx.lineTo(e.to.x, e.to.y);
+    ctx.stroke();
+  });
+
+  // Signal particles
+  updateParticles();
+
+  // Draw nodes
+  Object.values(nodes).flat().forEach(drawNode);
+
+  // Layer labels
+  const labels = ['INPUT', 'HIDDEN', 'HIDDEN', 'OUTPUT'];
+  [0,1,2,3].forEach(li => {
+    const ns = nodes[li];
+    if (!ns || !ns.length) return;
+    ctx.fillStyle = 'rgba(57,255,20,0.35)';
+    ctx.font = '10px Share Tech Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[li], ns[0].x, H() - 8);
+  });
+
+  animFrame = requestAnimationFrame(draw);
+}
+
+function drawNode(n) {
+  ctx.save();
+  ctx.translate(n.x, n.y);
+
+  if (n.active) {
+    // Glow
+    const grd = ctx.createRadialGradient(0,0,0,0,0,n.r*2.5);
+    grd.addColorStop(0, 'rgba(57,255,20,0.5)');
+    grd.addColorStop(1, 'rgba(57,255,20,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(0,0,n.r*2.5,0,Math.PI*2); ctx.fill();
+
+    // Fill
+    ctx.fillStyle = '#39FF14';
+    ctx.shadowColor = '#39FF14';
+    ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(0,0,n.r,0,Math.PI*2); ctx.fill();
+  } else {
+    // Outline
+    ctx.strokeStyle = n.clickable ? '#39FF14' : 'rgba(57,255,20,0.4)';
+    ctx.lineWidth = n.clickable ? 2 : 1.5;
+    if (n.clickable) {
+      ctx.setLineDash([4,3]);
+      ctx.shadowColor = 'rgba(57,255,20,0.3)';
+      ctx.shadowBlur = 6;
+    }
+    ctx.fillStyle = n.clickable ? 'rgba(57,255,20,0.05)' : 'rgba(57,255,20,0.02)';
+    ctx.beginPath(); ctx.arc(0,0,n.r,0,Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+// ─── PARTICLES ───────────────────────────────────────────────────────────────
+function spawnParticles() {
+  edges.forEach(e => {
+    if (e.active && Math.random() < 0.08) {
+      signalParticles.push({ from:{x:e.from.x,y:e.from.y}, to:{x:e.to.x,y:e.to.y}, t:0, speed: 0.012 + Math.random()*0.01 });
+    }
+  });
+}
+
+function updateParticles() {
+  spawnParticles();
+  signalParticles = signalParticles.filter(p => p.t < 1);
+  signalParticles.forEach(p => {
+    p.t += p.speed;
+    const x = p.from.x + (p.to.x - p.from.x) * p.t;
+    const y = p.from.y + (p.to.y - p.from.y) * p.t;
+    ctx.fillStyle = `rgba(57,255,20,${0.9 - p.t * 0.6})`;
+    ctx.shadowColor = '#39FF14';
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+}
+
+// ─── CLICK HANDLER ────────────────────────────────────────────────────────────
+canvas.addEventListener('click', e => {
+  if (submitted) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Check hidden layers (1 and 2 → mapped to hiddenState)
+  [1].forEach(li => {
+    nodes[li].forEach((n, i) => {
+      const dx = mx - n.x, dy = my - n.y;
+      if (Math.sqrt(dx*dx+dy*dy) <= n.r + 6) {
+        hiddenState[i] = hiddenState[i] ? 0 : 1;
+        updateOutputs();
+      }
+    });
+  });
+});
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+function submitAnswer() {
+  if (submitted) return;
+  submitted = true;
+
+  const r = ROUNDS[currentRound];
+  const outputVals = WEIGHTS.map(row => row.reduce((s,w,i)=>s+w*hiddenState[i],0) >= 2 ? 1 : 0);
+  const correct = outputVals[r.target] === 1 && outputVals[1-r.target] === 0;
+
+  const fb = document.getElementById('feedback');
+  if (correct) {
+    streak++;
+    const bonus = streak > 1 ? ` (+${streak}x STREAK)` : '';
+    score += 100 * streak;
+    fb.textContent = `✓ CORRECT! Signal routed perfectly.${bonus}`;
+    fb.className = 'feedback show correct';
+  } else {
+    streak = 0;
+    fb.textContent = `✗ WRONG PATTERN — try activating different hidden nodes.`;
+    fb.className = 'feedback show wrong';
+  }
+
+  document.getElementById('score').textContent = String(score).padStart(3,'0');
+  document.getElementById('streak').textContent = streak;
+
+  setTimeout(() => {
+    currentRound++;
+    if (currentRound >= ROUNDS.length) {
+      showWin();
+    } else {
+      loadRound();
+    }
+  }, correct ? 1200 : 1600);
+}
+
+// ─── HINT ─────────────────────────────────────────────────────────────────────
+function showHint() {
+  const sol = SOLUTIONS[currentRound];
+  const fb = document.getElementById('feedback');
+  const hints = sol.map((v,i) => v ? `H${i+1}` : null).filter(Boolean).join(', ');
+  fb.textContent = `HINT: Activate hidden nodes ${hints}`;
+  fb.className = 'feedback show correct';
+  score = Math.max(0, score - 20);
+  document.getElementById('score').textContent = String(score).padStart(3,'0');
+}
+
+function resetHidden() {
+  hiddenState = [0,0,0,0];
+  updateOutputs();
+}
+
+// ─── WIN ──────────────────────────────────────────────────────────────────────
+function showWin() {
+  document.getElementById('finalScore').textContent = String(score).padStart(3,'0');
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('winScreen').classList.add('show');
+}
+
+function restartGame() {
+  currentRound = 0; score = 0; streak = 0;
+  document.getElementById('score').textContent = '000';
+  document.getElementById('streak').textContent = '0';
+  document.getElementById('winScreen').classList.remove('show');
+  loadRound();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildLayout();
+loadRound();
+draw();
+</script>
+</body>
+</html>

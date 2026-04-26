@@ -1,0 +1,403 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bias Detective — Pnyxia</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --accent: #7fff6e;
+    --accent2: #ff6eb4;
+    --accent3: #6eaaff;
+    --text: #f0f0ff;
+    --muted: #6b6b8a;
+    --border: rgba(127,255,110,0.15);
+    --mono: 'Space Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--display); min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity:0.4;
+  }
+  body::after {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: linear-gradient(rgba(127,255,110,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(127,255,110,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* NAV */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px;
+    background:rgba(10,10,15,0.85);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .logo { font-family:var(--mono); font-size:18px; color:var(--accent); letter-spacing:-1px; text-decoration:none; }
+  .logo span { color:var(--text); }
+  .nav-back {
+    font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none;
+    letter-spacing:1px; text-transform:uppercase; transition:color .2s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .nav-back:hover { color:var(--accent); }
+  .game-badge {
+    font-family:var(--mono); font-size:10px; padding:6px 14px;
+    border:1px solid var(--border); color:var(--accent2); letter-spacing:1px; text-transform:uppercase;
+  }
+
+  /* PAGE LAYOUT */
+  .page-wrap {
+    position:relative; z-index:1;
+    max-width:860px; margin:0 auto;
+    padding:100px 40px 80px;
+  }
+  .page-header { margin-bottom:40px; }
+  .page-tag { font-family:var(--mono); font-size:11px; color:var(--accent2); letter-spacing:3px; text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+  .page-tag::before { content:''; width:24px; height:1px; background:var(--accent2); }
+  .page-title { font-size:clamp(36px,6vw,64px); font-weight:800; letter-spacing:-2px; line-height:0.95; margin-bottom:16px; }
+  .page-title span { color:var(--accent2); }
+  .page-sub { font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.7; max-width:560px; }
+
+  /* GAME CONTAINER */
+  .game-container {
+    background:var(--surface); border:1px solid var(--border); padding:40px;
+  }
+
+  /* SCORE BAR */
+  .bg-score-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+  .bg-score-wrap { display:flex; align-items:center; gap:12px; }
+  .bg-score-label { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .bg-score { color:var(--accent); font-weight:700; font-size:28px; letter-spacing:-1px; font-family:var(--display); }
+  .bg-q-label { font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right; }
+  .bg-q-label strong { color:var(--accent3); display:block; font-size:14px; font-family:var(--display); font-weight:800; }
+
+  /* PROGRESS BAR */
+  .bg-progress-wrap { margin-bottom:24px; }
+  .bg-progress { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+  .bg-progress-fill { height:100%; background:var(--accent2); transition:width .5s; border-radius:2px; }
+
+  /* INSTRUCTION */
+  .bg-intro {
+    font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.7;
+    margin-bottom:24px; padding:16px 20px;
+    background:var(--bg); border:1px solid var(--border);
+    border-left:3px solid var(--accent3);
+  }
+
+  /* SCENARIO */
+  .bg-scenario {
+    background:var(--bg); border:1px solid var(--border);
+    border-left:3px solid var(--accent3); padding:24px; margin-bottom:24px;
+  }
+  .bg-scenario-label { font-family:var(--mono); font-size:10px; color:var(--accent3); letter-spacing:2px; margin-bottom:12px; text-transform:uppercase; }
+  .bg-scenario-text { font-size:15px; line-height:1.75; margin-bottom:16px; color:var(--text); }
+  .bg-data { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .bg-data-item { font-family:var(--mono); font-size:11px; padding:5px 12px; border:1px solid var(--border); color:var(--muted); }
+
+  /* CHOICES */
+  .bg-choices { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .bg-choice {
+    padding:18px; border:1px solid var(--border);
+    background:transparent; cursor:pointer; text-align:left;
+    font-family:var(--mono); font-size:12px; color:var(--text);
+    transition:all .2s; line-height:1.6;
+  }
+  .bg-choice:hover:not(:disabled) { border-color:var(--accent3); color:var(--accent3); background:rgba(110,170,255,0.04); }
+  .bg-choice.correct { border-color:var(--accent); background:rgba(127,255,110,0.08); color:var(--accent); }
+  .bg-choice.wrong   { border-color:var(--accent2); background:rgba(255,110,180,0.08); color:var(--accent2); }
+  .bg-choice:disabled { cursor:default; }
+  .bg-choice-letter { display:inline-block; margin-right:6px; opacity:0.5; }
+
+  /* FEEDBACK */
+  .bg-feedback {
+    font-family:var(--mono); font-size:12px; padding:18px 20px;
+    border-left:3px solid var(--accent); background:rgba(127,255,110,0.04);
+    line-height:1.8; min-height:60px; color:var(--muted); margin-bottom:20px;
+    transition:border-color .3s;
+  }
+
+  /* NEXT BUTTON */
+  .bg-next {
+    width:100%; padding:16px 28px;
+    font-family:var(--mono); font-size:12px; font-weight:700;
+    letter-spacing:1px; text-transform:uppercase;
+    background:var(--accent); color:#0a0a0f;
+    border:none; cursor:pointer; display:none;
+    clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+    transition:opacity .2s;
+  }
+  .bg-next:hover { opacity:0.85; }
+
+  /* FINAL RESULT */
+  .bg-result {
+    display:none; text-align:center; padding:40px 24px;
+    background:var(--bg); border:1px solid var(--border);
+    margin-bottom:24px;
+  }
+  .bg-result.show { display:block; }
+  .bg-result-emoji { font-size:48px; margin-bottom:16px; }
+  .bg-result-score { font-size:64px; font-weight:800; letter-spacing:-3px; color:var(--accent); margin-bottom:8px; }
+  .bg-result-label { font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .bg-result-msg { font-size:22px; font-weight:800; letter-spacing:-0.5px; margin-bottom:24px; }
+  .bg-replay {
+    padding:14px 36px; background:var(--accent); color:#0a0a0f;
+    font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; border:none; cursor:pointer;
+    clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+    transition:opacity .2s;
+  }
+  .bg-replay:hover { opacity:0.85; }
+
+  /* FOOTER */
+  footer { position:relative; z-index:1; border-top:1px solid var(--border); padding:28px 40px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+  .footer-logo { font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .footer-logo span { color:var(--muted); }
+  .footer-link { font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:color .2s; }
+  .footer-link:hover { color:var(--accent); }
+
+  @media(max-width:640px) {
+    nav { padding:14px 20px; }
+    .page-wrap { padding:90px 20px 60px; }
+    .game-container { padding:24px 20px; }
+    .bg-choices { grid-template-columns:1fr; }
+    footer { padding:20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="index.html">Pny<span>xia</span></a>
+  <a class="nav-back" href="index.html">← Back to Games</a>
+  <div class="game-badge">02 — AI Ethics</div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div class="page-tag">Game 02</div>
+    <div class="page-title">Bias <span>Detective</span></div>
+    <p class="page-sub">Investigate real-world AI systems and identify the hidden biases within them. Each scenario is based on documented cases in machine learning.</p>
+  </div>
+
+  <div class="game-container" id="bias-game">
+
+    <div class="bg-score-bar">
+      <div class="bg-score-wrap">
+        <div class="bg-score-label">SCORE</div>
+        <div class="bg-score" id="bg-score">0</div>
+      </div>
+      <div class="bg-q-label">
+        <span id="bg-q-sub">Question 1 of 4</span>
+        <strong id="bg-q-name">Hiring Algorithm</strong>
+      </div>
+    </div>
+
+    <div class="bg-progress-wrap">
+      <div class="bg-progress"><div class="bg-progress-fill" id="bg-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="bg-intro">
+      Each scenario describes a real-world AI system. Identify the core bias or problem at play. Read carefully — the right answer requires understanding, not guesswork.
+    </div>
+
+    <div id="bg-result" class="bg-result">
+      <div class="bg-result-emoji" id="result-emoji">🏆</div>
+      <div class="bg-result-score" id="result-score">0/100</div>
+      <div class="bg-result-label">Final Score</div>
+      <div class="bg-result-msg" id="result-msg">Great work!</div>
+      <button class="bg-replay" onclick="bgReplay()">↺ Play Again</button>
+    </div>
+
+    <div id="bg-scenario-wrap"></div>
+    <div class="bg-choices" id="bg-choices"></div>
+    <div class="bg-feedback" id="bg-feedback">← Read the scenario above and select the best answer.</div>
+    <button class="bg-next" id="bg-next">Next Scenario →</button>
+
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Pny<span>xia</span></div>
+  <a class="footer-link" href="index.html">← All Games</a>
+</footer>
+
+<script>
+var biasScenarios = [
+  {
+    name: 'Hiring Algorithm',
+    label: '📋 Case 01 — Hiring Algorithm',
+    text: 'An AI model trained on 10 years of tech company hiring data is used to screen resumes. It consistently scores candidates lower if they attended women\'s colleges.',
+    data: ['Training data: 85% male hires','Model accuracy: 92%','Women\'s college flag: −15 pts','Test set: internal employees only'],
+    choices: [
+      'The model is fair — it achieved 92% accuracy',
+      'Historical bias in hiring data was learned by the model',
+      'Women\'s colleges produce less qualified graduates',
+      'The dataset is simply too small to be reliable'
+    ],
+    correct: 1,
+    feedback: 'Correct! The model learned from biased historical data where women were underrepresented. High accuracy does not mean fairness — the model replicated, not corrected, past discrimination. This is called historical bias.'
+  },
+  {
+    name: 'Medical Diagnosis AI',
+    label: '📋 Case 02 — Medical Diagnosis AI',
+    text: 'A skin cancer detection model performs with 95% accuracy overall, but only 78% accuracy on darker skin tones. The company publicly advertises only the 95% figure.',
+    data: ['Overall accuracy: 95%','Light skin accuracy: 97%','Dark skin accuracy: 78%','Training images: 91% light skin'],
+    choices: [
+      '95% accuracy is industry-leading — no concern needed',
+      'The model has a skin tone bias from unrepresentative training data',
+      'Darker skin is harder to photograph — not a model problem',
+      'Doctors should verify all AI outputs anyway'
+    ],
+    correct: 1,
+    feedback: 'Exactly. The training dataset was skewed heavily toward lighter skin tones. The 95% headline hides a dangerous real-world gap. This is called representation bias — the training data didn\'t reflect the real population.'
+  },
+  {
+    name: 'Loan Approval System',
+    label: '📋 Case 03 — Loan Approval System',
+    text: 'A bank\'s AI denies loans to applicants from certain zip codes at twice the rate of others, even when income and credit scores are identical across groups.',
+    data: ['Zip code used as input feature','Urban denial rate: 34%','Rural denial rate: 16%','Income & credit score: identical'],
+    choices: [
+      'Zip code is a legitimate financial risk factor',
+      'The system learned a proxy for race or socioeconomic class',
+      'Rural applicants are simply more creditworthy',
+      'The model just needs more data to improve'
+    ],
+    correct: 1,
+    feedback: 'Correct. Zip codes are proxies for protected characteristics like race and income level. Using them encodes historical housing segregation into modern lending decisions — this is called proxy discrimination.'
+  },
+  {
+    name: 'Content Moderation AI',
+    label: '📋 Case 04 — Content Moderation AI',
+    text: 'An AI moderation system flags 3× more posts written in African American Vernacular English (AAVE) as "toxic" compared to semantically equivalent statements in Standard American English.',
+    data: ['AAVE posts flagged: 61%','SAE equivalent: 19%','Training data: majority SAE','False positive rate (AAVE): 42%'],
+    choices: [
+      'AAVE inherently contains more toxic language patterns',
+      'The model developed a linguistic bias against non-standard dialects',
+      'Content moderation AI is equally imperfect for all groups',
+      'The detection threshold should simply be lowered'
+    ],
+    correct: 1,
+    feedback: 'Correct. The model was trained predominantly on Standard American English and penalises unfamiliar linguistic patterns — effectively silencing communities whose natural speech differs from the majority training distribution.'
+  }
+];
+
+var bgState = {};
+
+function initBiasGame() {
+  bgState = { score:0, idx:0, answered:false };
+  document.getElementById('bg-result').className = 'bg-result';
+  document.getElementById('bg-result').style.display = 'none';
+  document.getElementById('bg-scenario-wrap').style.display = '';
+  document.getElementById('bg-choices').style.display = '';
+  document.getElementById('bg-feedback').style.display = '';
+  bgRender();
+}
+
+function bgRender() {
+  var s = biasScenarios[bgState.idx];
+  var pct = (bgState.idx / biasScenarios.length) * 100;
+
+  document.getElementById('bg-q-sub').textContent = 'Question ' + (bgState.idx+1) + ' of ' + biasScenarios.length;
+  document.getElementById('bg-q-name').textContent = s.name;
+  document.getElementById('bg-bar').style.width = pct + '%';
+  document.getElementById('bg-feedback').textContent = '← Read the scenario above and select the best answer.';
+  document.getElementById('bg-feedback').style.borderLeftColor = 'var(--accent)';
+  document.getElementById('bg-next').style.display = 'none';
+  bgState.answered = false;
+
+  document.getElementById('bg-scenario-wrap').innerHTML =
+    '<div class="bg-scenario">' +
+      '<div class="bg-scenario-label">' + s.label + '</div>' +
+      '<div class="bg-scenario-text">' + s.text + '</div>' +
+      '<div class="bg-data">' +
+        s.data.map(function(d){ return '<div class="bg-data-item">' + d + '</div>'; }).join('') +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('bg-choices').innerHTML = s.choices.map(function(c, i){
+    return '<button class="bg-choice" id="bgc-' + i + '" onclick="bgChoose(' + i + ')">' +
+      '<span class="bg-choice-letter">' + String.fromCharCode(65+i) + '.</span>' + c +
+    '</button>';
+  }).join('');
+}
+
+function bgChoose(idx) {
+  if(bgState.answered) return;
+  bgState.answered = true;
+  var s = biasScenarios[bgState.idx];
+  var correct = idx === s.correct;
+
+  document.querySelectorAll('.bg-choice').forEach(function(el, i) {
+    el.classList.toggle('correct', i === s.correct);
+    el.classList.toggle('wrong', i === idx && !correct);
+    el.disabled = true;
+  });
+
+  if(correct) {
+    bgState.score += 25;
+    document.getElementById('bg-score').textContent = bgState.score;
+  }
+
+  var fb = document.getElementById('bg-feedback');
+  fb.textContent = (correct ? '✓ ' : '✗ ') + s.feedback;
+  fb.style.borderLeftColor = correct ? 'var(--accent)' : 'var(--accent2)';
+  document.getElementById('bg-bar').style.width = ((bgState.idx + 1) / biasScenarios.length * 100) + '%';
+
+  var nextBtn = document.getElementById('bg-next');
+  nextBtn.style.display = 'block';
+
+  if(bgState.idx < biasScenarios.length - 1) {
+    nextBtn.textContent = 'Next Scenario →';
+    nextBtn.onclick = bgNext;
+  } else {
+    nextBtn.textContent = 'See Results →';
+    nextBtn.onclick = bgShowResult;
+  }
+}
+
+function bgNext() {
+  bgState.idx++;
+  bgRender();
+}
+
+function bgShowResult() {
+  document.getElementById('bg-result').style.display = 'block';
+  document.getElementById('bg-result').className = 'bg-result show';
+  document.getElementById('bg-scenario-wrap').style.display = 'none';
+  document.getElementById('bg-choices').style.display = 'none';
+  document.getElementById('bg-feedback').style.display = 'none';
+  document.getElementById('bg-next').style.display = 'none';
+  document.getElementById('bg-bar').style.width = '100%';
+
+  var score = bgState.score;
+  var emoji, msg;
+  if(score === 100) { emoji = '🏆'; msg = 'Perfect Score! You\'re a true Bias Detective.'; }
+  else if(score >= 75)  { emoji = '🎉'; msg = 'Great work! You caught most of the biases.'; }
+  else if(score >= 50)  { emoji = '👍'; msg = 'Good effort! Keep studying the scenarios.'; }
+  else                  { emoji = '📚'; msg = 'Keep learning — every detective starts somewhere.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-score').textContent = score + '/100';
+  document.getElementById('result-msg').textContent = msg;
+}
+
+function bgReplay() {
+  document.getElementById('bg-score').textContent = '0';
+  initBiasGame();
+}
+
+initBiasGame();
+</script>
+</body>
+</html>

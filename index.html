@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pnyxia — Interactive AI Education</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --accent: #7fff6e;
+    --accent2: #ff6eb4;
+    --accent3: #6eaaff;
+    --text: #f0f0ff;
+    --muted: #6b6b8a;
+    --border: rgba(127,255,110,0.15);
+    --mono: 'Space Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--display); min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity:0.4;
+  }
+  body::after {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: linear-gradient(rgba(127,255,110,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(127,255,110,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px;
+    background:rgba(10,10,15,0.85);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+  }
+  .logo { font-family:var(--mono); font-size:18px; color:var(--accent); letter-spacing:-1px; text-decoration:none; }
+  .logo span { color:var(--text); }
+  .nav-links { display:flex; gap:32px; }
+  .nav-links a { font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:color .2s; }
+  .nav-links a:hover { color:var(--accent); }
+  .nav-pill {
+    font-family:var(--mono); font-size:11px; padding:8px 18px;
+    background:var(--accent); color:#0a0a0f; border:none; cursor:pointer;
+    font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+    transition:opacity .2s; text-decoration:none; display:inline-block;
+  }
+  .nav-pill:hover { opacity:0.85; }
+  .hero {
+    position:relative; z-index:1;
+    min-height:100vh; display:flex; flex-direction:column;
+    justify-content:center; padding:120px 40px 80px;
+    max-width:1100px; margin:0 auto;
+  }
+  .hero-tag { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:24px; display:flex; align-items:center; gap:10px; }
+  .hero-tag::before { content:''; width:32px; height:1px; background:var(--accent); }
+  h1 { font-size:clamp(52px,9vw,110px); font-weight:800; line-height:0.9; letter-spacing:-3px; margin-bottom:32px; }
+  h1 .line2 { color:var(--accent); display:block; }
+  h1 .line3 { color:var(--muted); font-size:0.5em; font-weight:400; letter-spacing:-1px; display:block; margin-top:8px; font-family:var(--mono); }
+  .hero-desc { max-width:480px; font-size:16px; color:var(--muted); line-height:1.7; margin-bottom:48px; font-family:var(--mono); }
+  .hero-cta { display:flex; gap:16px; flex-wrap:wrap; }
+  .btn-primary {
+    padding:16px 36px; background:var(--accent); color:#0a0a0f;
+    font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; border:none; cursor:pointer; text-decoration:none; display:inline-block;
+    clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+    transition:transform .15s, opacity .15s;
+  }
+  .btn-primary:hover { transform:translateY(-2px); opacity:.9; }
+  .btn-secondary {
+    padding:16px 36px; background:transparent; color:var(--text);
+    font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; border:1px solid var(--border); cursor:pointer;
+    text-decoration:none; display:inline-block; transition:border-color .2s;
+  }
+  .btn-secondary:hover { border-color:var(--accent); }
+  .hero-badge {
+    position:absolute; right:40px; top:50%; transform:translateY(-50%);
+    width:220px; height:220px; border:1px solid var(--border); border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    animation:spin 20s linear infinite;
+    background:radial-gradient(circle, rgba(127,255,110,0.04), transparent);
+  }
+  .hero-badge-inner { animation:spin-rev 20s linear infinite; text-align:center; }
+  .hero-badge-inner span { font-size:52px; display:block; margin-bottom:4px; }
+  .hero-badge-inner p { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:2px; }
+  @keyframes spin { to { transform:translateY(-50%) rotate(360deg); } }
+  @keyframes spin-rev { to { transform:rotate(-360deg); } }
+  .section { position:relative; z-index:1; padding:80px 40px; max-width:1100px; margin:0 auto; }
+  .section-label { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; }
+  .section-title { font-size:clamp(32px,5vw,56px); font-weight:800; letter-spacing:-2px; line-height:1; margin-bottom:48px; }
+  .games-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+  .game-card {
+    background:var(--surface); position:relative; overflow:hidden;
+    border:1px solid var(--border); transition:border-color .3s;
+    text-decoration:none; color:inherit; display:block;
+  }
+  .game-card:hover { border-color:var(--accent); }
+  .game-card:hover .game-card-overlay { opacity:1; }
+  .game-card:hover .play-btn { transform:scale(1.04); }
+  .game-card-overlay { position:absolute; inset:0; background:rgba(127,255,110,0.04); opacity:0; transition:opacity .3s; pointer-events:none; }
+  .game-card-header { padding:32px 32px 24px; display:flex; align-items:flex-start; justify-content:space-between; }
+  .game-number { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .game-tag { font-family:var(--mono); font-size:10px; padding:4px 10px; border:1px solid var(--border); color:var(--accent); letter-spacing:1px; text-transform:uppercase; }
+  .game-visual {
+    height:200px; margin:0 32px; border:1px solid var(--border);
+    overflow:hidden; position:relative; background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .game-card-body { padding:24px 32px 32px; }
+  .game-title { font-size:28px; font-weight:800; letter-spacing:-1px; margin-bottom:8px; }
+  .game-desc { font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:24px; }
+  .play-btn {
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    padding:12px 24px; background:var(--accent); color:#0a0a0f;
+    border:none; cursor:pointer; transition:transform .15s;
+    clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  }
+  .nn-preview { display:flex; align-items:center; gap:12px; }
+  .nn-layer { display:flex; flex-direction:column; gap:8px; }
+  .nn-node { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--accent); background:transparent; transition:background .3s; }
+  .nn-node.active { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .nn-edge { width:20px; height:1px; background:rgba(127,255,110,0.2); }
+  .bd-preview { font-family:var(--mono); font-size:11px; color:var(--accent); text-align:center; padding:10px; }
+  .bd-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .bd-card { padding:6px 10px; border:1px solid var(--border); font-size:10px; color:var(--muted); font-family:var(--mono); }
+  .bd-card.flagged { border-color:var(--accent2); color:var(--accent2); }
+  .concepts { position:relative; z-index:1; border-top:1px solid var(--border); border-bottom:1px solid var(--border); overflow:hidden; }
+  .concepts-track { display:flex; animation:marquee 20s linear infinite; }
+  @keyframes marquee { to { transform:translateX(-50%); } }
+  .concept-item { flex-shrink:0; padding:18px 40px; font-family:var(--mono); font-size:12px; color:var(--muted); border-right:1px solid var(--border); white-space:nowrap; letter-spacing:1px; }
+  .concept-item span { color:var(--accent); margin-right:8px; }
+  .stats-strip { position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .stat-item { padding:40px 32px; border-right:1px solid var(--border); }
+  .stat-item:last-child { border-right:none; }
+  .stat-num { font-size:48px; font-weight:800; letter-spacing:-2px; color:var(--accent); }
+  .stat-label { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; letter-spacing:1px; text-transform:uppercase; }
+  .about-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; }
+  .about-card { background:var(--surface); padding:32px; border:1px solid var(--border); }
+  .about-icon { font-size:28px; margin-bottom:16px; }
+  .about-card-title { font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-bottom:10px; }
+  .about-card-text { font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.7; }
+  footer { position:relative; z-index:1; border-top:1px solid var(--border); padding:40px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+  .footer-left p:first-child { font-family:var(--display); font-size:20px; font-weight:800; color:var(--accent); margin-bottom:6px; }
+  .footer-left p:last-child { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .footer-links { display:flex; gap:24px; }
+  .footer-links a { font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; transition:color .2s; letter-spacing:1px; text-transform:uppercase; }
+  .footer-links a:hover { color:var(--accent); }
+  @media(max-width:768px) {
+    .games-grid, .about-grid { grid-template-columns:1fr; }
+    .stats-strip { grid-template-columns:1fr 1fr; }
+    .hero-badge { display:none; }
+    nav { padding:16px 20px; }
+    .nav-links { display:none; }
+    .hero { padding:100px 20px 60px; }
+    .section { padding:60px 20px; }
+    footer { padding:24px 20px; }
+    .game-card-header, .game-card-body { padding:20px; }
+    .game-visual { margin:0 20px; }
+  }
+  @media(max-width:480px) {
+    .stats-strip { grid-template-columns:1fr; }
+    .stat-item { border-right:none; border-bottom:1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="index.html">Pny<span>xia</span></a>
+  <div class="nav-links">
+    <a href="#games">Games</a>
+    <a href="#about">About</a>
+    <a href="#stats">Stats</a>
+  </div>
+  <a class="nav-pill" href="#games">Play Now</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-tag">Interactive AI Education</div>
+  <h1>
+    Pny<span style="color:var(--accent)">xia</span><br>
+    <span class="line2">by playing.</span>
+    <span class="line3">// no math degree required</span>
+  </h1>
+  <p class="hero-desc">
+    Master machine learning, bias detection, neural networks, and more — through hands-on games, not textbooks.
+  </p>
+  <div class="hero-cta">
+    <a class="btn-primary" href="#games">Play Now →</a>
+    <a class="btn-secondary" href="#about">How It Works</a>
+  </div>
+  <div class="hero-badge">
+    <div class="hero-badge-inner">
+      <span>🧠</span>
+      <p>Learn by doing</p>
+    </div>
+  </div>
+</section>
+
+<div class="concepts">
+  <div class="concepts-track" id="marquee-track"></div>
+</div>
+
+<div id="games" class="section">
+  <div class="section-label">// Interactive Games</div>
+  <div class="section-title">Choose your game</div>
+  <div class="games-grid">
+
+    <a class="game-card" href="neural-trainer.html">
+      <div class="game-card-overlay"></div>
+      <div class="game-card-header">
+        <span class="game-number">01</span>
+        <span class="game-tag">Neural Nets</span>
+      </div>
+      <div class="game-visual">
+        <div class="nn-preview" id="nn-preview"></div>
+      </div>
+      <div class="game-card-body">
+        <div class="game-title">Neural Trainer</div>
+        <p class="game-desc">Activate neurons in the right pattern to classify data. Learn how signals flow through layers — inputs, hidden nodes, outputs.</p>
+        <div class="play-btn">▶ Play Game</div>
+      </div>
+    </a>
+
+    <a class="game-card" href="bias-detective.html">
+      <div class="game-card-overlay"></div>
+      <div class="game-card-header">
+        <span class="game-number">02</span>
+        <span class="game-tag">AI Ethics</span>
+      </div>
+      <div class="game-visual" style="flex-direction:column;gap:16px;padding:20px;">
+        <div class="bd-preview">🔍 Spot the bias in AI decisions</div>
+        <div class="bd-cards">
+          <div class="bd-card">Loan: Approved ✓</div>
+          <div class="bd-card flagged">Loan: Denied ✗</div>
+          <div class="bd-card">Loan: Approved ✓</div>
+          <div class="bd-card flagged">Bias detected!</div>
+        </div>
+      </div>
+      <div class="game-card-body">
+        <div class="game-title">Bias Detective</div>
+        <p class="game-desc">Investigate real-world AI scenarios and identify hidden biases. Can you spot what the algorithm missed?</p>
+        <div class="play-btn">▶ Play Game</div>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div id="stats" class="stats-strip">
+  <div class="stat-item">
+    <div class="stat-num">2</div>
+    <div class="stat-label">Games Available</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">5+</div>
+    <div class="stat-label">AI Concepts</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">4</div>
+    <div class="stat-label">Bias Scenarios</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">0</div>
+    <div class="stat-label">Prerequisites</div>
+  </div>
+</div>
+
+<div id="about" class="section">
+  <div class="section-label">// Why Pnyxia</div>
+  <div class="section-title">Built different</div>
+  <div class="about-grid">
+    <div class="about-card">
+      <div class="about-icon">⚡</div>
+      <div class="about-card-title">No Lectures</div>
+      <p class="about-card-text">Every concept is embedded in a game. You learn by doing, not by reading slides or watching videos.</p>
+    </div>
+    <div class="about-card">
+      <div class="about-icon">🎯</div>
+      <div class="about-card-title">Real Concepts</div>
+      <p class="about-card-text">Backpropagation, bias, embeddings, overfitting — real AI ideas, made tangible and playable.</p>
+    </div>
+    <div class="about-card">
+      <div class="about-icon">🔓</div>
+      <div class="about-card-title">Free Forever</div>
+      <p class="about-card-text">No paywalls, no sign-ups required. Just open the browser and start playing immediately.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left">
+    <p>Pny<span style="color:var(--text)">xia</span></p>
+    <p>© 2025 — Pnyxia</p>
+  </div>
+  <div class="footer-links">
+    <a href="#">GitHub</a>
+    <a href="#">Discord</a>
+    <a href="#">Credits</a>
+  </div>
+</footer>
+
+<script>
+  const concepts = ['Supervised Learning','Neural Networks','Bias & Fairness','Backpropagation','Overfitting','Training Data','Loss Function','Gradient Descent','Classification','Embeddings','Transformers','Reinforcement Learning'];
+  const track = document.getElementById('marquee-track');
+  [...concepts,...concepts].forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'concept-item';
+    el.innerHTML = '<span>→</span>' + c;
+    track.appendChild(el);
+  });
+
+  function buildNNPreview() {
+    const preview = document.getElementById('nn-preview');
+    if (!preview) return;
+    const layers = [3,4,3,2];
+    let html = '';
+    layers.forEach((count, li) => {
+      html += '<div class="nn-layer">';
+      for(let i=0;i<count;i++) html += '<div class="nn-node" id="pn-'+li+'-'+i+'"></div>';
+      html += '</div>';
+      if(li < layers.length-1) html += '<div class="nn-edge"></div>';
+    });
+    preview.innerHTML = html;
+    animatePreview();
+  }
+  function animatePreview() {
+    const nodes = document.querySelectorAll('.nn-node');
+    if(!nodes.length) return;
+    nodes.forEach(n => n.classList.remove('active'));
+    for(let i=0;i<4;i++) nodes[Math.floor(Math.random()*nodes.length)]?.classList.add('active');
+    setTimeout(animatePreview, 900);
+  }
+  buildNNPreview();
+</script>
+</body>
+</html>
